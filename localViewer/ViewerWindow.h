@@ -2,6 +2,9 @@
 #include <QMainWindow>
 #include <memory>
 
+class QString;
+class QGraphicsPixmapItem;
+
 class ViewerWindow
 	: public QMainWindow
 {
@@ -10,12 +13,15 @@ class ViewerWindow
 		ViewerWindow();
 		~ViewerWindow();
 
-		void connect(QString address);
-
 	signals:
+		// Update display with most recently read value, in range 0-1
 		void newReadout(float readout);
+		void connectRequested(QString hostname, uint16_t port);
+	
+	public slots:
+		void updateImage(QImage* imageData);
 
 	protected:
-		std::unique_ptr<class QTcpSocket> m_dataConnection;
+		QGraphicsPixmapItem* m_imageDisplayItem;
 };
 

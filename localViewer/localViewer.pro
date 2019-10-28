@@ -6,7 +6,7 @@ TEMPLATE = app
 TARGET = localViewer
 QT+=widgets network printsupport
 INCLUDEPATH += .
-QMAKE_CXXFLAGS += -std=c++14
+QMAKE_CXXFLAGS += -std=c++14 -I../protocol
 
 # The following define makes your compiler warn you if you use any
 # feature of Qt which has been marked as deprecated (the exact warnings
@@ -20,5 +20,5 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-HEADERS += ViewerWindow.h
-SOURCES += main.cpp ViewerWindow.cpp
+HEADERS += ViewerWindow.h ImageGenerator.h
+SOURCES += main.cpp ViewerWindow.cpp ImageGenerator.cpp

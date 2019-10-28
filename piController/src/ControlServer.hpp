@@ -1,10 +1,6 @@
 #pragma once
 #include <vector>
-
-struct ControlState
-{
-	float m_adChannel1;
-};
+#include <Protocol.h>
 
 class ControlServer
 {
@@ -12,7 +8,7 @@ public:
 	ControlServer();
 	~ControlServer();
 
-	void step(const ControlState& curState);
+	void step(const Packets::CurrentState& curState);
 
 	struct Socket
 	{
@@ -20,6 +16,7 @@ public:
 		Socket(Socket&& other);
 		Socket& operator=(Socket&& other);
 		~Socket();
+
 		int m_socket;
 	};
 

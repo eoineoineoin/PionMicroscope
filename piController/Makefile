@@ -12,7 +12,7 @@ CXX = /home/eoin/code/rpicc/tools/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/
 
 DEBUG = -g -O0 -Wall -Werror
 CFLAGS += $(DEBUG) 
-CFLAGS += -Iinclude -Isrc
+CFLAGS += -Iinclude -Isrc -I../protocol
 
 CXXFLAGS += -std=c++14
 

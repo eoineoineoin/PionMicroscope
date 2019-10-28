@@ -38,7 +38,7 @@
 
 #define DAC_Value_MAX  65535
 
-#define DAC_VREF  3.3
+#define DAC_VREF  5.0
 
 #ifdef __cplusplus
 extern "C" {

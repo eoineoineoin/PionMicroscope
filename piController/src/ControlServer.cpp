@@ -7,29 +7,43 @@
 #include <unistd.h>
 #include <cstdio>
 #include <errno.h>
+#include <algorithm>
 
 ControlServer::ControlServer()
 	: m_serverSocket(-1)
 {
 	int serverFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
-	printf("Server FD: %i\n", serverFd);
 
 	m_serverSocket = Socket(serverFd);
 
 	sockaddr_in listenAddr;
 	listenAddr.sin_family = AF_INET;
-	listenAddr.sin_port = htons(3017);
+	const uint16_t portNum = 3017;
+	listenAddr.sin_port = htons(portNum);
 	listenAddr.sin_addr.s_addr = inet_addr("0.0.0.0");
 
 	int err = bind(serverFd, (sockaddr*)&listenAddr, sizeof(listenAddr));
-	printf("Bind: %i errno=%i\n", err, errno);
-	err = listen(serverFd, 10);
-	printf("Listen: %i errno=%i\n", err, errno);
+	if(err != 0)
+	{
+		printf("Could not bind to socket (%i)", errno);
+	}
+	else
+	{
+		err = listen(serverFd, 10);
+		if(err != 0)
+		{
+			printf("Could not listen to socket (%i)\n", errno);
+		}
+		else
+		{
+			printf("Server listening on port %i\n", portNum);
+		}
+	}
 }
 
 ControlServer::~ControlServer() = default;
 
-void ControlServer::step(const ControlState& curState)
+void ControlServer::step(const Packets::CurrentState& curState)
 {
 	sockaddr_in clientAddr;
 	socklen_t clientAddrSize = sizeof(clientAddr);
@@ -40,9 +54,18 @@ void ControlServer::step(const ControlState& curState)
 		m_clients.emplace_back<Socket>(newClient);
 	}
 
-	for(Socket& s : m_clients)
+	for(auto it = m_clients.begin(); it != m_clients.end();)
 	{
-		send(s.m_socket, &curState, sizeof(curState), MSG_DONTWAIT);
+		int sentBytes = send(it->m_socket, &curState, sizeof(curState), MSG_DONTWAIT | MSG_NOSIGNAL);
+		if(sentBytes != sizeof(curState))
+		{
+			printf("Lost connection\n");
+			m_clients.erase(it);
+		}
+		else
+		{
+			it++;
+		}
 	}
 }
 
@@ -68,3 +91,4 @@ ControlServer::Socket::~Socket()
 		close(m_socket);
 	}
 }
+

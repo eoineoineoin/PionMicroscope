@@ -4,7 +4,11 @@
 #include <QLabel>
 #include <QBoxLayout>
 #include <QLineEdit>
-#include <QTcpSocket>
+#include <QPixmap>
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QGraphicsPixmapItem>
+#include <QScrollBar>
 
 ViewerWindow::ViewerWindow()
 {
@@ -27,29 +31,60 @@ ViewerWindow::ViewerWindow()
 		QObject::connect(connectButton, &QPushButton::clicked,
 			[serverEntry, this](bool)
 			{
-				this->connect(serverEntry->text());
+				QStringList split = serverEntry->text().split(':');
+				printf("Connecting to %s port %s\n",
+						split.at(0).toLocal8Bit().constData(),
+						split.at(1).toLocal8Bit().constData());
+
+				this->connectRequested(split.at(0), split.at(1).toUShort());
 			});
 	}
 
+	QWidget* liveDisplay = new QWidget(this);
+	QBoxLayout* liveLayout = new QBoxLayout(QBoxLayout::LeftToRight);
 	{
 		QWidget* readoutWidget = new QWidget(this);
 
 		QSlider* readoutSlider = new QSlider();
-		QLabel* readoutLabel = new QLabel("1234");
-		QBoxLayout* readoutLayout = new QBoxLayout(QBoxLayout::LeftToRight);
+		QLabel* readoutLabel = new QLabel("0");
+		QBoxLayout* readoutLayout = new QBoxLayout(QBoxLayout::TopToBottom);
 		readoutLayout->addWidget(readoutSlider);
-		readoutLayout->addWidget(readoutLabel);
+		//readoutLayout->addWidget(readoutLabel);
 		readoutWidget->setLayout(readoutLayout);
 
 		QObject::connect(this, &ViewerWindow::newReadout,
 			[readoutSlider, readoutLabel](float readout)
 			{
 				QString formatted;
-				formatted.setNum(readout);
+				formatted.setNum(readout, 'g', 3);
 				readoutLabel->setText(formatted);
-				readoutSlider->setValue(readout);
+				readoutSlider->setValue((int)(readout * readoutSlider->maximum()));
 			});
-		combinedLayout->addWidget(readoutWidget);
+		liveLayout->addWidget(readoutWidget);
+	}
+	liveDisplay->setLayout(liveLayout);
+	combinedLayout->addWidget(liveDisplay);
+
+
+	// Image display TODO.eoin clean up; this shouldn't be creating images
+	{
+		QImage* imageData = new QImage(1024, 1024, QImage::Format_RGB32);
+		QGraphicsScene* imageScene = new QGraphicsScene();
+		m_imageDisplayItem = imageScene->addPixmap(QPixmap::fromImage(*imageData));
+		imageScene->setSceneRect(imageData->rect());
+
+		// Scene makes a copy of the QPixmap, so we need to explicitly
+		// set the data again after it is changed:
+		imageData->fill(QColor::fromRgb(0xaaaaff));
+		m_imageDisplayItem->setPixmap(QPixmap::fromImage(*imageData));
+
+		QGraphicsView* imageView = new QGraphicsView(imageScene);
+		imageView->scale(4.0, 4.0);
+		liveLayout->addWidget(imageView);
+
+		imageView->horizontalScrollBar()->setValue(0);
+		imageView->verticalScrollBar()->setValue(0);
+		delete imageData;
 	}
 
 	
@@ -57,26 +92,9 @@ ViewerWindow::ViewerWindow()
 	setCentralWidget(combinedWidgets);
 }
 
-void ViewerWindow::connect(QString address)
-{
-	QStringList split = address.split(':');
-	printf("Connecting to %s port %s\n",
-			split.at(0).toLocal8Bit().constData(),
-			split.at(1).toLocal8Bit().constData());
-
-	m_dataConnection = std::make_unique<QTcpSocket>();
-	m_dataConnection->connectToHost(split.at(0), split.at(1).toUShort());
-
-	QObject::connect(m_dataConnection.get(), &QTcpSocket::readyRead,
-		[this]()
-		{
-			float packet[100];
-			int bytesRead = this->m_dataConnection->read((char*)&packet, sizeof(packet));
-
-			float lastValue = packet[bytesRead / sizeof(packet[0]) - 1];
-			lastValue = 100.0f * (lastValue / 5374017);
-			this->newReadout(lastValue);
-		});
-}
-
 ViewerWindow::~ViewerWindow() = default;
+
+void ViewerWindow::updateImage(QImage* newImage)
+{
+	m_imageDisplayItem->setPixmap(QPixmap::fromImage(*newImage));
+}

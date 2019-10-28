@@ -12,6 +12,7 @@
 #include <DAC8532.h>
 #include <ADS1256.h>
 #include <ControlServer.hpp>
+#include <BeamController.hpp>
 
 void  Handler(int signo)  //This block of code allows exit of the program via "ctrl+c" when in the command Terminal, DO NOT EDIT
 {
@@ -22,14 +23,9 @@ void  Handler(int signo)  //This block of code allows exit of the program via "c
     exit(0);
 }
 
-// Output voltage
-inline float vToOutVoltage(float vIn)
-{
-	return vIn / 1.55f;
-}
-
 int main(void)
 {
+	//<TODO.eoin Move initialization inside beam controller
     DEV_ModuleInit();
 
     // Exception handling:ctrl + c (This allows exit of program via "ctrl+c" when in command Terminal, DO NOT EDIT)
@@ -42,8 +38,29 @@ int main(void)
 
 	ControlServer controlServer;
 
+//#define OUTPUT_LINEARITY_TEST
+#ifdef OUTPUT_LINEARITY_TEST
+	while(1)
+	{
+		printf("Input: ");
+		int v;
+		scanf("%i", &v);
+		uint16_t i16 = (uint16_t)(v);
+		Write_DAC8532(channel_A, i16);
+	}
+#endif
+
 //#define OUTPUT_TEST
 #ifdef OUTPUT_TEST
+	uint16_t vi = 0;
+	while(1)
+	{
+		Write_DAC8532(channel_A, vi);
+		vi += 1;
+	}
+#endif
+//#define OUTPUT_TEST2
+#ifdef OUTPUT_TEST2
 	const float maxV = 3.3f;
 	while(1)
 	{
@@ -55,7 +72,7 @@ int main(void)
 	}
 #endif
 
-#define INPUT_TEST
+//#define INPUT_TEST
 #ifdef INPUT_TEST
 
 	while(1)
@@ -66,12 +83,19 @@ int main(void)
 		{
 			printf("%f\n", input);
 		}
-		ControlState curState = { input };
-		controlServer.step(curState);
-
 		usleep(2 * 1e4);
 	}
 #endif
+
+	BeamController beamController;
+	typedef Packets::CurrentState ControlState;
+	while(1)
+	{
+		ControlState curState = beamController.step();
+
+		controlServer.step(curState);
+	}
+	printf("Finished\n");
     
     DAC8532_Out_Voltage(channel_A,0);
     DAC8532_Out_Voltage(channel_B,0);
