@@ -9,6 +9,40 @@
 #include <QGraphicsView>
 #include <QGraphicsPixmapItem>
 #include <QScrollBar>
+#include <QFileDialog>
+#include <QWheelEvent>
+#include <QApplication>
+#include <algorithm>
+
+namespace
+{
+class ZoomingGraphicsView
+	: public QGraphicsView
+{
+public:
+	ZoomingGraphicsView(QGraphicsScene* scene) : QGraphicsView(scene) {}
+
+	virtual void wheelEvent(QWheelEvent* event) override
+	{
+		if(QApplication::keyboardModifiers() & Qt::ControlModifier)
+		{
+			float curScale = transform().m11();
+			if(event->delta() > 0 && curScale < 16.0f)
+			{
+				scale(2.0f, 2.0f);
+			}
+			else if(event->delta() < 0 && curScale > 0.5f)
+			{
+				scale(0.5f, 0.5f);
+			}
+		}
+		else
+		{
+			QGraphicsView::wheelEvent(event);
+		}
+	}
+};
+}
 
 ViewerWindow::ViewerWindow()
 {
@@ -60,6 +94,21 @@ ViewerWindow::ViewerWindow()
 				readoutLabel->setText(formatted);
 				readoutSlider->setValue((int)(readout * readoutSlider->maximum()));
 			});
+
+		QPushButton* saveButton = new QPushButton("Save");
+		readoutLayout->addWidget(saveButton);
+
+		QObject::connect(saveButton, &QPushButton::clicked,
+			[this](bool)
+			{
+				QString saveFile = QFileDialog::getSaveFileName(this,
+						"Save file", QString(), "Image (*.png)");
+				if(saveFile != nullptr)
+				{
+					this->saveImage(saveFile);
+				}
+			});
+
 		liveLayout->addWidget(readoutWidget);
 	}
 	liveDisplay->setLayout(liveLayout);
@@ -78,8 +127,7 @@ ViewerWindow::ViewerWindow()
 		imageData->fill(QColor::fromRgb(0xaaaaff));
 		m_imageDisplayItem->setPixmap(QPixmap::fromImage(*imageData));
 
-		QGraphicsView* imageView = new QGraphicsView(imageScene);
-		imageView->scale(4.0, 4.0);
+		ZoomingGraphicsView* imageView = new ZoomingGraphicsView(imageScene);
 		liveLayout->addWidget(imageView);
 
 		imageView->horizontalScrollBar()->setValue(0);

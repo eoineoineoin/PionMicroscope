@@ -17,6 +17,7 @@ int main(int argc, char** argv)
 
 	std::unique_ptr<class QTcpSocket> serverConnection;
 
+	// Signals for network connection to inform viewers when we get data
 	QObject::connect(&window, &ViewerWindow::connectRequested,
 		[&serverConnection, &window, &imageGenerator](QString hostname, uint16_t port)
 		{
@@ -38,5 +39,7 @@ int main(int argc, char** argv)
 			});
 		});
 
+	// Save image signal
+	QObject::connect(&window, &ViewerWindow::saveImage, &imageGenerator, &ImageGenerator::saveImage);
 	a.exec();
 }

@@ -19,6 +19,9 @@ class ImageGenerator
 	signals:
 		void updatedImage(QImage* image);
 
+	public slots:
+		void saveImage(QString filenameOut);
+
 	protected:
 		std::unique_ptr<QImage> m_imageData;
 		std::deque<Packets::CurrentState> m_recvQueue;

@@ -57,3 +57,8 @@ void ImageGenerator::updatePixels(Packets::CurrentState* newStates, int numState
 
 	emit updatedImage(m_imageData.get());
 }
+
+void ImageGenerator::saveImage(QString filenameOut)
+{
+	m_imageData->save(filenameOut);
+}

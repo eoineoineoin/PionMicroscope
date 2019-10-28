@@ -17,6 +17,7 @@ class ViewerWindow
 		// Update display with most recently read value, in range 0-1
 		void newReadout(float readout);
 		void connectRequested(QString hostname, uint16_t port);
+		void saveImage(QString filenameOut);
 	
 	public slots:
 		void updateImage(QImage* imageData);
