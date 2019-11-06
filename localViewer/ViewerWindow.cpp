@@ -1,5 +1,7 @@
 #include <ViewerWindow.h>
 #include <QPushButton>
+#include <QToolButton>
+#include <QDialogButtonBox>
 #include <QSlider>
 #include <QLabel>
 #include <QBoxLayout>
@@ -12,6 +14,8 @@
 #include <QFileDialog>
 #include <QWheelEvent>
 #include <QApplication>
+#include <QMenu>
+#include <QComboBox>
 #include <algorithm>
 
 namespace
@@ -42,6 +46,39 @@ public:
 		}
 	}
 };
+
+class ResolutionSelectionDialog
+	: public QDialog
+{
+public:
+	ResolutionSelectionDialog(QWidget* parent = nullptr)
+		: QDialog(parent)
+	{
+		QBoxLayout* layout = new QBoxLayout(QBoxLayout::LeftToRight);
+		setLayout(layout);
+
+		m_comboBox = new QComboBox;
+		m_comboBox->addItem("128", QVariant(128));
+		m_comboBox->addItem("256", QVariant(256));
+		m_comboBox->addItem("512", QVariant(512));
+		m_comboBox->addItem("1024", QVariant(1024));
+
+		QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+		connect(buttons, SIGNAL(accepted()), this, SLOT(accept()));
+		connect(buttons, SIGNAL(rejected()), this, SLOT(reject()));
+
+		layout->addWidget(m_comboBox);
+		layout->addWidget(buttons);
+	}
+
+	int selectedResolution() const
+	{
+		int selectedIdx = m_comboBox->currentIndex();
+		return m_comboBox->itemData(selectedIdx).toInt();
+	}
+
+	QComboBox* m_comboBox;
+};
 }
 
 ViewerWindow::ViewerWindow()
@@ -56,7 +93,28 @@ ViewerWindow::ViewerWindow()
 		QLineEdit* serverEntry = new QLineEdit("192.168.0.23:3017");
 		connectionLayout->addWidget(serverEntry);
 
-		QPushButton* connectButton = new QPushButton("Connect");
+		QMenu* connectionMenu;
+		{
+			connectionMenu = new QMenu;
+			connectionMenu->addAction("Lock/Unlock X",
+				[this]()
+				{
+					this->toggleXLockRequested();
+				});
+			connectionMenu->addAction("Change resolution",
+				[this]()
+				{
+					ResolutionSelectionDialog diag;
+					if(diag.exec() == QDialog::Accepted)
+					{
+						this->newResolutionRequested(diag.selectedResolution());
+					}
+				});
+		}
+
+		QToolButton* connectButton = new QToolButton;
+		connectButton->setText("Connect");
+		connectButton->setMenu(connectionMenu);
 		connectionLayout->addWidget(connectButton);
 
 		connectWidget->setLayout(connectionLayout);
@@ -72,31 +130,9 @@ ViewerWindow::ViewerWindow()
 
 				this->connectRequested(split.at(0), split.at(1).toUShort());
 			});
-	}
-
-	QWidget* liveDisplay = new QWidget(this);
-	QBoxLayout* liveLayout = new QBoxLayout(QBoxLayout::LeftToRight);
-	{
-		QWidget* readoutWidget = new QWidget(this);
-
-		QSlider* readoutSlider = new QSlider();
-		QLabel* readoutLabel = new QLabel("0");
-		QBoxLayout* readoutLayout = new QBoxLayout(QBoxLayout::TopToBottom);
-		readoutLayout->addWidget(readoutSlider);
-		//readoutLayout->addWidget(readoutLabel);
-		readoutWidget->setLayout(readoutLayout);
-
-		QObject::connect(this, &ViewerWindow::newReadout,
-			[readoutSlider, readoutLabel](float readout)
-			{
-				QString formatted;
-				formatted.setNum(readout, 'g', 3);
-				readoutLabel->setText(formatted);
-				readoutSlider->setValue((int)(readout * readoutSlider->maximum()));
-			});
 
 		QPushButton* saveButton = new QPushButton("Save");
-		readoutLayout->addWidget(saveButton);
+		connectionLayout->addWidget(saveButton);
 
 		QObject::connect(saveButton, &QPushButton::clicked,
 			[this](bool)
@@ -107,6 +143,28 @@ ViewerWindow::ViewerWindow()
 				{
 					this->saveImage(saveFile);
 				}
+			});
+	}
+
+	QWidget* liveDisplay = new QWidget(this);
+	QBoxLayout* liveLayout = new QBoxLayout(QBoxLayout::LeftToRight);
+	{
+		QWidget* readoutWidget = new QWidget(this);
+
+		QSlider* readoutSlider = new QSlider();
+		QLabel* readoutLabel = new QLabel;
+		QBoxLayout* readoutLayout = new QBoxLayout(QBoxLayout::TopToBottom);
+		readoutLayout->addWidget(readoutSlider);
+		//readoutLayout->addWidget(readoutLabel); //<TODO.eoin Calc minimum size and re-add
+		readoutWidget->setLayout(readoutLayout);
+
+		QObject::connect(this, &ViewerWindow::newReadout,
+			[readoutSlider, readoutLabel](float readout)
+			{
+				QString formatted;
+				formatted.setNum(readout, 'g', 3);
+				readoutLabel->setText(formatted);
+				readoutSlider->setValue((int)(readout * readoutSlider->maximum()));
 			});
 
 		liveLayout->addWidget(readoutWidget);

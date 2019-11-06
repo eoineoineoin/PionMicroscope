@@ -43,7 +43,7 @@ ControlServer::ControlServer()
 
 ControlServer::~ControlServer() = default;
 
-void ControlServer::step(const Packets::CurrentState& curState)
+Packets::ControlCommand ControlServer::step(const Packets::CurrentState& curState)
 {
 	sockaddr_in clientAddr;
 	socklen_t clientAddrSize = sizeof(clientAddr);
@@ -56,7 +56,22 @@ void ControlServer::step(const Packets::CurrentState& curState)
 
 	for(auto it = m_clients.begin(); it != m_clients.end();)
 	{
+		fd_set readFds;
+		timeval waitTime = {0};
+		FD_ZERO(&readFds);
+		FD_SET(it->m_socket, &readFds);
+		if(select(1, &readFds, nullptr, nullptr, &waitTime))
+		{
+			Packets::ControlCommand cmdIn;
+			int nRead = recv(it->m_socket, &cmdIn, sizeof(cmdIn), MSG_DONTWAIT);
+			if(nRead == sizeof(cmdIn))
+			{
+				m_incomingCommands.push_back(cmdIn);
+			}
+		}
+
 		int sentBytes = send(it->m_socket, &curState, sizeof(curState), MSG_DONTWAIT | MSG_NOSIGNAL);
+
 		if(sentBytes != sizeof(curState))
 		{
 			printf("Lost connection\n");
@@ -67,6 +82,14 @@ void ControlServer::step(const Packets::CurrentState& curState)
 			it++;
 		}
 	}
+
+	if(m_incomingCommands.size())
+	{
+		Packets::ControlCommand first = m_incomingCommands.front();
+		m_incomingCommands.pop_front();
+		return first;
+	}
+	return {Packets::ControlCommand::Type::NONE, 0};
 }
 
 ControlServer::Socket::Socket(int sockfd) : m_socket(sockfd) {}

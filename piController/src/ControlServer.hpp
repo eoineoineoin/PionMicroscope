@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <deque>
 #include <Protocol.h>
 
 class ControlServer
@@ -8,7 +9,7 @@ public:
 	ControlServer();
 	~ControlServer();
 
-	void step(const Packets::CurrentState& curState);
+	Packets::ControlCommand step(const Packets::CurrentState& curState);
 
 	struct Socket
 	{
@@ -22,5 +23,6 @@ public:
 
 	Socket m_serverSocket;
 	std::vector<Socket> m_clients;
+	std::deque<Packets::ControlCommand> m_incomingCommands;
 };
 

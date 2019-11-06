@@ -18,6 +18,8 @@ class ViewerWindow
 		void newReadout(float readout);
 		void connectRequested(QString hostname, uint16_t port);
 		void saveImage(QString filenameOut);
+		void newResolutionRequested(int res);
+		void toggleXLockRequested();
 	
 	public slots:
 		void updateImage(QImage* imageData);
