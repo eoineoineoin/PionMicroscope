@@ -5,7 +5,7 @@
 
 BeamController::BeamController() = default;
 
-Packets::CurrentState BeamController::step()
+Packets::BeamState BeamController::step()
 {
 	m_xyPlateState.m_lastX += 1;
 	if(m_xyPlateState.m_lastX >= m_imageProps.m_xResolution)
@@ -27,5 +27,26 @@ Packets::CurrentState BeamController::step()
 	usleep(m_imageProps.m_pauseUsec);
 	
 	uint32_t inputVoltage = ADS1256_GetChannalValue(1);
-	return {m_xyPlateState.m_lastX, m_xyPlateState.m_lastY, inputVoltage};
+	Packets::BeamState stateOut;
+	stateOut.m_x = m_xyPlateState.m_lastX;
+	stateOut.m_y = m_xyPlateState.m_lastY;
+	stateOut.m_input0 = inputVoltage;
+
+	return stateOut;
+}
+
+void BeamController::setResolution(uint16_t resolutionX, uint16_t resolutionY)
+{
+	m_imageProps.m_xResolution = resolutionX;
+	m_imageProps.m_yResolution = resolutionY;
+}
+
+void BeamController::lockX(uint16_t xImagespace)
+{
+	assert(false);
+}
+
+void BeamController::freeX()
+{
+	assert(false);
 }

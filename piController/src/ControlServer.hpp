@@ -3,13 +3,23 @@
 #include <deque>
 #include <Protocol.h>
 
+class CommandHandler;
+
 class ControlServer
 {
 public:
 	ControlServer();
 	~ControlServer();
 
-	Packets::ControlCommand step(const Packets::CurrentState& curState);
+	struct OnConnectInfo
+	{
+		uint16_t m_resolutionX;
+		uint16_t m_resolutionY;
+	};
+
+	void step(CommandHandler* commandHandler,
+			const OnConnectInfo& newClientConnectionInfo,
+			const Packets::BeamState& beamState);
 
 	struct Socket
 	{

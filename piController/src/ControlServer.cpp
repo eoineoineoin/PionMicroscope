@@ -1,4 +1,5 @@
 #include <ControlServer.hpp>
+#include <CommandHandler.hpp>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/socket.h>
@@ -8,6 +9,27 @@
 #include <cstdio>
 #include <errno.h>
 #include <algorithm>
+
+template<typename T>
+static void appendToBuffer(std::vector<uint8_t>& buf, const T& data)
+{
+	const uint8_t* data8 = reinterpret_cast<const uint8_t*>(&data);
+	buf.insert(buf.end(), data8, data8 + sizeof(T));
+}
+
+static int sendToClient(const ControlServer::Socket& client, std::vector<uint8_t>& buffer)
+{
+	return send(client.m_socket, &buffer[0], buffer.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
+}
+namespace
+{
+struct LargestCommand : public Packets::BasePacket
+{
+	uint8_t m_padding[7];
+};
+static_assert(sizeof(LargestCommand) == 8, "Expect largest command to be 8 bytes");
+}
+
 
 ControlServer::ControlServer()
 	: m_serverSocket(-1)
@@ -43,7 +65,9 @@ ControlServer::ControlServer()
 
 ControlServer::~ControlServer() = default;
 
-Packets::ControlCommand ControlServer::step(const Packets::CurrentState& curState)
+void ControlServer::step(CommandHandler* commandHandler,
+		const OnConnectInfo& newClientConnectionInfo,
+		const Packets::BeamState& beamState)
 {
 	sockaddr_in clientAddr;
 	socklen_t clientAddrSize = sizeof(clientAddr);
@@ -52,8 +76,18 @@ Packets::ControlCommand ControlServer::step(const Packets::CurrentState& curStat
 	{
 		printf("Got new connection from %s\n", inet_ntoa(clientAddr.sin_addr));
 		m_clients.emplace_back<Socket>(newClient);
+		
+		std::vector<uint8_t> outputBuffer;
+
+		Packets::ResolutionChanged resolutionInfo;
+		resolutionInfo.m_resolutionX = newClientConnectionInfo.m_resolutionX;
+		resolutionInfo.m_resolutionY = newClientConnectionInfo.m_resolutionY;
+		appendToBuffer(outputBuffer, resolutionInfo);
+
+		sendToClient(m_clients.back(), outputBuffer);
 	}
 
+	std::vector<LargestCommand> incomingCommands;
 	for(auto it = m_clients.begin(); it != m_clients.end();)
 	{
 		fd_set readFds;
@@ -62,17 +96,37 @@ Packets::ControlCommand ControlServer::step(const Packets::CurrentState& curStat
 		FD_SET(it->m_socket, &readFds);
 		if(select(1, &readFds, nullptr, nullptr, &waitTime))
 		{
-			Packets::ControlCommand cmdIn;
+			LargestCommand cmdIn;
 			int nRead = recv(it->m_socket, &cmdIn, sizeof(cmdIn), MSG_DONTWAIT);
 			if(nRead == sizeof(cmdIn))
 			{
-				m_incomingCommands.push_back(cmdIn);
+				incomingCommands.push_back(cmdIn);
 			}
 		}
+	}
 
-		int sentBytes = send(it->m_socket, &curState, sizeof(curState), MSG_DONTWAIT | MSG_NOSIGNAL);
+	std::vector<uint8_t> outputBuffer;
+	appendToBuffer(outputBuffer, beamState);
+	//<TODO.eoin process all incoming commands, pass to handler; append results to output buffer
+	for(const Packets::BasePacket& c : incomingCommands)
+	{
+		if(c.m_type == Packets::Type::SET_RESOLUTION)
+		{
+			const Packets::SetResolution* setRes = static_cast<const Packets::SetResolution*>(&c);
+			commandHandler->setResolution(setRes->m_resolutionX, setRes->m_resolutionY);
+			
+			Packets::ResolutionChanged resolutionInfo;
+			resolutionInfo.m_resolutionX = newClientConnectionInfo.m_resolutionX;
+			resolutionInfo.m_resolutionY = newClientConnectionInfo.m_resolutionY;
+			appendToBuffer(outputBuffer, resolutionInfo);
+		}
+	}
+	
 
-		if(sentBytes != sizeof(curState))
+	for(auto it = m_clients.begin(); it != m_clients.end();)
+	{
+		int sentBytes = sendToClient(*it, outputBuffer);
+		if(sentBytes != (decltype(sentBytes))outputBuffer.size())
 		{
 			printf("Lost connection\n");
 			m_clients.erase(it);
@@ -82,14 +136,6 @@ Packets::ControlCommand ControlServer::step(const Packets::CurrentState& curStat
 			it++;
 		}
 	}
-
-	if(m_incomingCommands.size())
-	{
-		Packets::ControlCommand first = m_incomingCommands.front();
-		m_incomingCommands.pop_front();
-		return first;
-	}
-	return {Packets::ControlCommand::Type::NONE, 0};
 }
 
 ControlServer::Socket::Socket(int sockfd) : m_socket(sockfd) {}

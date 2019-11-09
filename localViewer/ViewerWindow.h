@@ -3,6 +3,7 @@
 #include <memory>
 
 class QString;
+class QGraphicsScene;
 class QGraphicsPixmapItem;
 
 class ViewerWindow
@@ -23,8 +24,10 @@ class ViewerWindow
 	
 	public slots:
 		void updateImage(QImage* imageData);
+		void setImageSize(QRect imageSize);
 
 	protected:
+		QGraphicsScene* m_imageScene;
 		QGraphicsPixmapItem* m_imageDisplayItem;
 };
 

@@ -176,16 +176,16 @@ ViewerWindow::ViewerWindow()
 	// Image display TODO.eoin clean up; this shouldn't be creating images
 	{
 		QImage* imageData = new QImage(1024, 1024, QImage::Format_RGB32);
-		QGraphicsScene* imageScene = new QGraphicsScene();
-		m_imageDisplayItem = imageScene->addPixmap(QPixmap::fromImage(*imageData));
-		imageScene->setSceneRect(imageData->rect());
+		m_imageScene = new QGraphicsScene();
+		m_imageDisplayItem = m_imageScene->addPixmap(QPixmap::fromImage(*imageData));
+		m_imageScene->setSceneRect(imageData->rect());
 
 		// Scene makes a copy of the QPixmap, so we need to explicitly
 		// set the data again after it is changed:
 		imageData->fill(QColor::fromRgb(0xaaaaff));
 		m_imageDisplayItem->setPixmap(QPixmap::fromImage(*imageData));
 
-		ZoomingGraphicsView* imageView = new ZoomingGraphicsView(imageScene);
+		ZoomingGraphicsView* imageView = new ZoomingGraphicsView(m_imageScene);
 		liveLayout->addWidget(imageView);
 
 		imageView->horizontalScrollBar()->setValue(0);
@@ -203,4 +203,9 @@ ViewerWindow::~ViewerWindow() = default;
 void ViewerWindow::updateImage(QImage* newImage)
 {
 	m_imageDisplayItem->setPixmap(QPixmap::fromImage(*newImage));
+}
+
+void ViewerWindow::setImageSize(QRect imageSize)
+{
+	m_imageScene->setSceneRect(imageSize);
 }

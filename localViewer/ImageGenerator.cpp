@@ -25,12 +25,12 @@ inline QRgb u32ToRgb(uint32_t in)
 
 ImageGenerator::ImageGenerator()
 {
-	m_imageData = std::make_unique<QImage>(1024, 1024, QImage::Format_RGB32);
+	setResolution(1024, 1024);
 }
 
 ImageGenerator::~ImageGenerator() = default;
 
-void ImageGenerator::updatePixels(Packets::CurrentState* newStates, int numStates)
+void ImageGenerator::updatePixels(Packets::BeamState* newStates, int numStates)
 {
 	for(int i = 0; i < numStates; i++)
 	{
@@ -44,18 +44,29 @@ void ImageGenerator::updatePixels(Packets::CurrentState* newStates, int numState
 		m_recvQueue.pop_front();
 	}
 
-	for(const Packets::CurrentState& newPixel : m_recvQueue)
+	for(const Packets::BeamState& newPixel : m_recvQueue)
 	{
 		m_imageData->setPixel(newPixel.m_x, newPixel.m_y, u32ToRgb<true>(newPixel.m_input0));
 	}
 
 	// Colour the most recently recieved pixel bright blue, so we can see the read head
 	{
-		const Packets::CurrentState& newest = m_recvQueue.back();
+		const Packets::BeamState& newest = m_recvQueue.back();
 		m_imageData->setPixel(newest.m_x, newest.m_y, 0xff0000ff);
 	}
 
 	emit updatedImage(m_imageData.get());
+}
+
+void ImageGenerator::setResolution(uint16_t resX, uint16_t resY)
+{
+	//<TODO.eoin Could rescale existing image
+	if(m_imageData == nullptr || resX != m_imageData->rect().width() || resY != m_imageData->rect().height())
+	{
+		m_imageData = std::make_unique<QImage>(resX, resY, QImage::Format_RGB32);
+		m_recvQueue.clear();
+		emit resolutionChanged(m_imageData->rect());
+	}
 }
 
 void ImageGenerator::saveImage(QString filenameOut)

@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QRect>
 #include <memory>
 #include <deque>
 #include <Protocol.h>
@@ -15,15 +16,18 @@ class ImageGenerator
 		ImageGenerator();
 		~ImageGenerator();
 
-		void updatePixels(Packets::CurrentState* newState, int numStates);
+		void updatePixels(Packets::BeamState* newState, int numStates);
+		void setResolution(uint16_t resX, uint16_t resY);
+
 	signals:
 		void updatedImage(QImage* image);
+		void resolutionChanged(QRect imageSize);
 
 	public slots:
 		void saveImage(QString filenameOut);
 
 	protected:
 		std::unique_ptr<QImage> m_imageData;
-		std::deque<Packets::CurrentState> m_recvQueue;
+		std::deque<Packets::BeamState> m_recvQueue;
 };
 

@@ -88,12 +88,16 @@ int main(void)
 #endif
 
 	BeamController beamController;
-	typedef Packets::CurrentState ControlState;
+	CommandHandler* commandHandler = &beamController; //<TODO.eoin Probably split this out a different way
 	while(1)
 	{
-		ControlState curState = beamController.step();
+		Packets::BeamState beamState = beamController.step();
 
-		controlServer.step(curState);
+		ControlServer::OnConnectInfo connectionInfo;
+		connectionInfo.m_resolutionX = beamController.getResolutionX();
+		connectionInfo.m_resolutionY = beamController.getResolutionY();
+
+		controlServer.step(commandHandler, connectionInfo, beamState);
 	}
 	printf("Finished\n");
     
