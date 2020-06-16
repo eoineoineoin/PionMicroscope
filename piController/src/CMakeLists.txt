@@ -17,3 +17,6 @@ add_executable(piController ${DAC_CONTROL} BeamController.cpp ControlServer.cpp 
 target_link_directories(piController PUBLIC ../lib)
 target_link_libraries(piController bcm2835 m)
 
+add_executable(dacTest ${DAC_CONTROL} dacTest.cpp DACBoard.cpp)
+target_link_directories(dacTest PUBLIC ../lib)
+target_link_libraries(dacTest bcm2835 m)
