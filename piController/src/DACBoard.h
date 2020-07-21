@@ -19,3 +19,11 @@ protected:
 	float m_refVoltage;
 };
 
+namespace A2D
+{
+// Perform calibration and update internal state.
+// Should be called before reading any value.
+void calibrate();
+
+float getChannelValue(uint8_t channelIdx);
+}

@@ -21,6 +21,6 @@ add_executable(dacTest ${DAC_CONTROL} dacTest.cpp DACBoard.cpp)
 target_link_directories(dacTest PUBLIC ../lib)
 target_link_libraries(dacTest bcm2835 m)
 
-add_executable(readA0Test ${DAC_CONTROL} readA0Test.cpp)
+add_executable(readA0Test ${DAC_CONTROL} readA0Test.cpp DACBoard.cpp)
 target_link_directories(readA0Test PUBLIC ../lib)
 target_link_libraries(readA0Test bcm2835 m)
