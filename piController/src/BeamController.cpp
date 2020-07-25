@@ -3,7 +3,10 @@
 #include <ADS1256.h>
 #include <unistd.h>
 
-BeamController::BeamController() = default;
+BeamController::BeamController()
+	: m_d2a(DACBoard::REF_5V)
+{
+}
 
 Packets::BeamState BeamController::step()
 {
@@ -21,12 +24,12 @@ Packets::BeamState BeamController::step()
 	float xVoltage = xFrac / DAC_VREF;
 	float yVoltage = yFrac / DAC_VREF;
 
-	DAC8532_Out_Voltage(channel_A, xVoltage);
-	DAC8532_Out_Voltage(channel_B, yVoltage);
+	m_d2a.writeVoltage(DACBoard::Channel::A, xVoltage);
+	m_d2a.writeVoltage(DACBoard::Channel::B, xVoltage);
 
 	usleep(m_imageProps.m_pauseUsec);
 	
-	uint32_t inputVoltage = ADS1256_GetChannalValue(1);
+	uint32_t inputVoltage = A2D::getChannelValue(1);
 	Packets::BeamState stateOut;
 	stateOut.m_x = m_xyPlateState.m_lastX;
 	stateOut.m_y = m_xyPlateState.m_lastY;

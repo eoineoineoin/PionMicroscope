@@ -3,6 +3,26 @@
 #include <bcm2835.h>
 #include <algorithm>
 
+#if SIMULATOR == 1
+extern "C"
+{
+UBYTE DEV_ModuleInit(void)
+{
+	return 0;
+}
+
+void DEV_ModuleExit(void)
+{
+}
+
+UBYTE ADS1256_init(void)
+{
+	return 0;
+}
+
+}
+#endif
+
 DACBoard::DACBoard(ReferenceVoltage ref, int chipSelectPin)
 	: m_chipSelectPin(chipSelectPin)
 {
@@ -11,12 +31,19 @@ DACBoard::DACBoard(ReferenceVoltage ref, int chipSelectPin)
 	else
 		m_refVoltage = 5.0f;
 
+#if !defined(SIMULATOR) || (SIMULATOR == 0)
     bcm2835_gpio_fsel(m_chipSelectPin, BCM2835_GPIO_FSEL_OUTP);
+#endif
 }
 
 
 void DACBoard::writeVoltage(Channel channel, float out)
 {
+#if SIMULATOR == 1
+	(void)channel;
+	(void)out;
+	return;
+#else
 	uint8_t channelId = channel == Channel::A ? 0x30 : 0x34;
 	uint32_t quantized = out * UINT16_MAX / m_refVoltage;
 	uint32_t maxV = UINT16_MAX;
@@ -28,10 +55,12 @@ void DACBoard::writeVoltage(Channel channel, float out)
 	bcm2835_spi_transfer(voltage >> 8);
 	bcm2835_spi_transfer(voltage & 0xff);
 	bcm2835_gpio_write(m_chipSelectPin, 1);
+#endif
 }
 
 namespace A2D
 {
+#if SIMULATOR == 0
 static void ADS1256_WriteReg(UBYTE Reg, UBYTE data)
 {
     DEV_Digital_Write(DEV_CS_PIN, 0);
@@ -100,6 +129,7 @@ static int32_t ADS1256_Read_ADC_Data(void)
     uint32_t value24 = bytesTo24(buf);
 	return signExtend24(value24);
 }
+#endif
 
 static struct CalData
 {
@@ -116,6 +146,9 @@ static struct CalData
 
 void calibrate()
 {
+#if SIMULATOR == 1
+	return;
+#else
 	ADS1256_WriteCmd(CMD_SELFCAL);
 	waitForReadyPin();
 
@@ -130,10 +163,15 @@ void calibrate()
 	fsc[1] = ADS1256_Read_register(REG_FSC1);
 	fsc[2] = ADS1256_Read_register(REG_FSC2);
 	s_calData.fsc = bytesTo24(fsc); // FSC is unsigned
+#endif
 }
 
 float getChannelValue(uint8_t channelIdx)
 {
+#if SIMULATOR == 1
+	(void)channelIdx;
+	return 0.1f;
+#else
 	// From datasheet, in calibration section:
 	// output = ((pga * vin / 2vref) - (ofc / alpha)) * fsc * beta
 	// So
@@ -148,6 +186,7 @@ float getChannelValue(uint8_t channelIdx)
 	float term3 = 2 * s_calData.vref / s_calData.pga;
 	
 	return ((term1 + term2) * term3) / 2.0f;
+#endif
 }
 
 }

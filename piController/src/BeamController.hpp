@@ -1,6 +1,7 @@
 #pragma once
 #include <Protocol.h>
 #include <CommandHandler.hpp>
+#include <DACBoard.h>
 
 class BeamController
 	: public CommandHandler
@@ -30,5 +31,6 @@ class BeamController
 			uint16_t  m_lastY;
 		} m_xyPlateState;
 
+		DACBoard m_d2a;
 };
 

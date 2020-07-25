@@ -16,6 +16,7 @@
 
 void  Handler(int signo)  //This block of code allows exit of the program via "ctrl+c" when in the command Terminal, DO NOT EDIT
 {
+	(void)signo;
     //System Exit
     printf("\r\nEND                  \r\n");
     DEV_ModuleExit();

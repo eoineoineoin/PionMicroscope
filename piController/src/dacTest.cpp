@@ -40,7 +40,6 @@ int main(void)
 		printf("DAC0 (V): ");
 		scanf("%f", &v);
 		dacInterface.writeVoltage(DACBoard::Channel::A, v);
-		DAC8532_Out_Voltage(channel_B, v);
 
 		printf("DAC1 (V): ");
 		scanf("%f", &v);
