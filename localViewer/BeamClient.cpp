@@ -9,6 +9,9 @@ void BeamClient::connect(QString hostname, uint16_t port)
 
 void BeamClient::sendResolutionChange(int xyResolution)
 {
+	if(m_serverConnection == nullptr)
+		return;
+
 	Packets::SetResolution setRes;
 
 	if(xyResolution < 0 || xyResolution > UINT16_MAX)
