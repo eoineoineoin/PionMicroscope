@@ -90,7 +90,7 @@ ViewerWindow::ViewerWindow()
 		QWidget* connectWidget = new QWidget();
 		QBoxLayout* connectionLayout = new QBoxLayout(QBoxLayout::LeftToRight);
 
-		QLineEdit* serverEntry = new QLineEdit("192.168.0.23:3017");
+		QLineEdit* serverEntry = new QLineEdit("localhost:3017");
 		connectionLayout->addWidget(serverEntry);
 
 		QMenu* connectionMenu;

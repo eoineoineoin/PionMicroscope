@@ -1,75 +1,48 @@
-#include <ViewerWindow.h>
-#include <ImageGenerator.h>
+#include <ViewerWindow.hpp>
+#include <ImageGenerator.hpp>
 #include <QApplication>
-#include <QTcpSocket>
 #include <cassert>
 
 #include <Protocol.h>
+#include <BeamClient.hpp>
 
 int main(int argc, char** argv)
 {
 	QApplication a(argc, argv);
 	ViewerWindow window;
 	window.show();
-
+	
 	ImageGenerator imageGenerator;
 	QObject::connect(&imageGenerator, &ImageGenerator::updatedImage, &window, &ViewerWindow::updateImage);
 	QObject::connect(&imageGenerator, &ImageGenerator::resolutionChanged, &window, &ViewerWindow::setImageSize);
 
-	std::unique_ptr<class QTcpSocket> serverConnection;
+	BeamClient server;
 
-	// Signals for network connection to inform viewers when we get data
-	QObject::connect(&window, &ViewerWindow::connectRequested,
-		[&serverConnection, &window, &imageGenerator](QString hostname, uint16_t port)
+	// For user pressing "connect" button:
+	QObject::connect(&window, &ViewerWindow::connectRequested, &server, &BeamClient::connect);
+
+	// When server sends a "resolution changed" confirmation, resize our image:
+	QObject::connect(&server, &BeamClient::onResolutionChanged,
+		[&imageGenerator](const Packets::ResolutionChanged& newRes)
 		{
-			serverConnection = std::make_unique<QTcpSocket>();
-			serverConnection->connectToHost(hostname, port);
-
-			QObject::connect(serverConnection.get(), &QTcpSocket::readyRead,
-			[&window, &serverConnection, &imageGenerator]()
-			{
-				//<TODO.eoin Getting unwieldy. Move to a seperate class.
-				uint8_t inputBuffer[800];
-				int bytesRead = serverConnection->read((char*)inputBuffer, sizeof(inputBuffer));
-				assert(bytesRead % sizeof(Packets::BeamState) == 0);
-
-				const Packets::BasePacket* curPacket = reinterpret_cast<Packets::BasePacket*>(inputBuffer);
-				const Packets::BasePacket* packetEnd = reinterpret_cast<Packets::BasePacket*>(inputBuffer + bytesRead);
-
-				std::vector<Packets::BeamState> beamStatesAccumulated;
-				beamStatesAccumulated.reserve((packetEnd - curPacket) / sizeof(Packets::BeamState));
-				while(curPacket < packetEnd)
-				{
-					if(curPacket->m_type == Packets::Type::BEAM_STATE)
-					{
-						const Packets::BeamState* beamState = curPacket->asBeamState();
-						beamStatesAccumulated.push_back(*beamState);
-						curPacket = beamState + 1;
-					}
-					else if(curPacket->m_type == Packets::Type::RESOLUTION_CHANGED)
-					{
-						const Packets::ResolutionChanged* resolutionChanged = curPacket->asResolutionChanged();
-						imageGenerator.setResolution(resolutionChanged->m_resolutionX, resolutionChanged->m_resolutionY);
-						curPacket = resolutionChanged + 1;
-					}
-					else
-					{
-						assert(false && "Packet type not handled");
-					}
-				}
-
-				if(beamStatesAccumulated.size())
-				{
-					imageGenerator.updatePixels(&beamStatesAccumulated[0], beamStatesAccumulated.size());
-
-					float lastFrac = (float)((beamStatesAccumulated.back().m_input0) / (float)(~(decltype(beamStatesAccumulated.back().m_input0))0));
-					window.newReadout(lastFrac);
-				}
-
-			});
+			printf("Got resolution changed\n");
+			imageGenerator.setResolution(newRes.m_resolutionX, newRes.m_resolutionY);
 		});
 
-	// Save image signal
+	// When server sends a batch of beam updates, write them to the image:
+	QObject::connect(&server, &BeamClient::onBeamUpdated,
+		[&imageGenerator, &window](const std::vector<Packets::BeamState>& beamStates)
+		{
+			imageGenerator.updatePixels(&beamStates[0], beamStates.size());
+
+			//TODO: Formalize this, as it is wrong, after correcting input lib:
+			float maxVal = (float)(~(decltype(beamStates.back().m_input0))0);
+			float lastFrac = (float)((beamStates.back().m_input0) / maxVal);
+			window.newReadout(lastFrac);
+		});
+
+	
+	// For user pressing "save" button:
 	QObject::connect(&window, &ViewerWindow::saveImage, &imageGenerator, &ImageGenerator::saveImage);
 	a.exec();
 }

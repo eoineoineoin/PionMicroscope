@@ -16,7 +16,7 @@ class ImageGenerator
 		ImageGenerator();
 		~ImageGenerator();
 
-		void updatePixels(Packets::BeamState* newState, int numStates);
+		void updatePixels(const Packets::BeamState* newState, int numStates);
 		void setResolution(uint16_t resX, uint16_t resY);
 
 	signals:

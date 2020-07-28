@@ -1,4 +1,4 @@
-#include <ImageGenerator.h>
+#include <ImageGenerator.hpp>
 #include <QImage>
 
 // Color this many of the most recently recieved pixels differently:
@@ -30,7 +30,7 @@ ImageGenerator::ImageGenerator()
 
 ImageGenerator::~ImageGenerator() = default;
 
-void ImageGenerator::updatePixels(Packets::BeamState* newStates, int numStates)
+void ImageGenerator::updatePixels(const Packets::BeamState* newStates, int numStates)
 {
 	for(int i = 0; i < numStates; i++)
 	{
