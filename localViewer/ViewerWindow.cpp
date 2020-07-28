@@ -95,23 +95,8 @@ ViewerWindow::ViewerWindow()
 		QLineEdit* serverEntry = new QLineEdit("localhost:3017");
 		connectionLayout->addWidget(serverEntry);
 
-		QMenu* connectionMenu;
-		{
-			connectionMenu = new QMenu;
-			connectionMenu->addAction("Change resolution",
-				[this]()
-				{
-					ResolutionSelectionDialog diag;
-					if(diag.exec() == QDialog::Accepted)
-					{
-						this->newResolutionRequested(diag.selectedResolution());
-					}
-				});
-		}
-
-		QToolButton* connectButton = new QToolButton;
+		QPushButton* connectButton = new QPushButton("Connect");
 		connectButton->setText("Connect");
-		connectButton->setMenu(connectionMenu);
 		connectionLayout->addWidget(connectButton);
 
 		connectWidget->setLayout(connectionLayout);
@@ -126,6 +111,18 @@ ViewerWindow::ViewerWindow()
 						split.at(1).toLocal8Bit().constData());
 
 				this->connectRequested(split.at(0), split.at(1).toUShort());
+			});
+
+		QPushButton* resolutionButton = new QPushButton("Resolution");
+		connectionLayout->addWidget(resolutionButton);
+		QObject::connect(resolutionButton, &QPushButton::clicked,
+			[this]()
+			{
+				ResolutionSelectionDialog diag;
+				if(diag.exec() == QDialog::Accepted)
+				{
+					this->newResolutionRequested(diag.selectedResolution());
+					}
 			});
 
 		QPushButton* saveButton = new QPushButton("Save");
