@@ -17,6 +17,7 @@
 #include <QMenu>
 #include <QComboBox>
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -218,6 +219,26 @@ ViewerWindow::ViewerWindow()
 }
 
 ViewerWindow::~ViewerWindow() = default;
+
+void ViewerWindow::setDisplayedManualControls(bool lockedX, float fracX, bool lockedY, float fracY)
+{
+	bool locked[] = {lockedX, lockedY};
+	float frac[] = {fracX, fracY};
+	
+	for(int a = 0; a < 2; a++)
+	{
+		// Disable signals so we don't re-trigger commands back to the server:
+		m_manualControlSliders[a]->blockSignals(true);
+
+		// Make sure the text matches on the button:
+		m_manualControlToggles[a]->setText(lockLabels[a][locked[a]]);
+		m_manualControlSliders[a]->setEnabled(locked[a]);
+		m_manualControlSliders[a]->setValue(std::round(frac[a] * m_manualControlSliders[a]->maximum()));
+
+		// And re-enable the signals again:
+		m_manualControlSliders[a]->blockSignals(false);
+	}
+}
 
 void ViewerWindow::updateImage(QImage* newImage)
 {

@@ -36,6 +36,21 @@ int main(int argc, char** argv)
 			imageGenerator.setResolution(newRes.m_resolutionX, newRes.m_resolutionY);
 		});
 
+	// Similarly, when the user changes the manual beam controls, send the command
+	// that requests the mode and expect aconfirmation, so other clients can see:
+	QObject::connect(&window, &ViewerWindow::newBeamStateRequested,
+		&server, &BeamClient::sendManualControlChange);
+
+	QObject::connect(&server, &BeamClient::onManualControlsUpdated,
+		[&window](const Packets::SetTargetMode& newTarget)
+		{
+			bool lockedX = newTarget.m_modeX == Packets::SetTargetMode::AxisMode::LOCK;
+			bool lockedY = newTarget.m_modeY == Packets::SetTargetMode::AxisMode::LOCK;
+			float fracX = (float)newTarget.m_fracX / (float)UINT16_MAX;
+			float fracY = (float)newTarget.m_fracY / (float)UINT16_MAX;
+			window.setDisplayedManualControls(lockedX, fracX, lockedY, fracY);
+		});
+	
 	// When server sends a batch of beam updates, write them to the image:
 	QObject::connect(&server, &BeamClient::onBeamUpdated,
 		[&imageGenerator, &window](const std::vector<Packets::BeamState>& beamStates)

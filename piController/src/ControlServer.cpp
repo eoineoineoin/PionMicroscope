@@ -111,7 +111,8 @@ void ControlServer::step(CommandHandler* commandHandler,
 
 	std::vector<uint8_t> outputBuffer;
 	appendToBuffer(outputBuffer, beamState);
-	//<TODO.eoin process all incoming commands, pass to handler; append results to output buffer
+
+	// Process all incoming commands, pass to handler; append results to output buffer
 	for(const Packets::BasePacket& c : incomingCommands)
 	{
 		if(c.m_type == Packets::Type::SET_RESOLUTION)
@@ -123,6 +124,38 @@ void ControlServer::step(CommandHandler* commandHandler,
 			resolutionInfo.m_resolutionX = setRes->m_resolutionX;
 			resolutionInfo.m_resolutionY = setRes->m_resolutionY;
 			appendToBuffer(outputBuffer, resolutionInfo);
+		}
+		else if(c.m_type == Packets::Type::SET_TARGET_MODE)
+		{
+			const Packets::SetTargetMode* setTarget = static_cast<const Packets::SetTargetMode*>(&c);
+
+			if(setTarget->m_modeX == Packets::SetTargetMode::AxisMode::LOCK)
+			{
+				float frac = (float)setTarget->m_fracX / (float)UINT16_MAX;
+				commandHandler->lock(CommandHandler::Axis::X, frac);
+			}
+			else
+			{
+				commandHandler->free(CommandHandler::Axis::X);
+			}
+
+			if(setTarget->m_modeY == Packets::SetTargetMode::AxisMode::LOCK)
+			{
+				float frac = (float)setTarget->m_fracY / (float)UINT16_MAX;
+				commandHandler->lock(CommandHandler::Axis::Y, frac);
+			}
+			else
+			{
+				commandHandler->free(CommandHandler::Axis::Y);
+			}
+
+			// Write the packet back for any other clients:
+			//TODO: This needs to be sent to new clients, too
+			appendToBuffer(outputBuffer, *setTarget);
+		}
+		else
+		{
+			printf("Got unknown command!\n");
 		}
 	}
 	

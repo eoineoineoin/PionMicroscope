@@ -58,14 +58,19 @@ static_assert(sizeof(SetResolution) == sizeof(uint64_t), "Expect 8 byte commands
 
 struct SetTargetMode : public TypedPacket<Type::SET_TARGET_MODE>
 {
-	enum class Mode : uint8_t
+	enum class AxisMode : uint8_t
 	{
-		LOCK_X,
-		UNLOCK_X,
-	} m_mode;
+		LOCK,
+		UNLOCK,
+	};
+	
+	AxisMode m_modeX;
+	AxisMode m_modeY;
 
-	uint16_t m_targetData; // Fixed coordinate in LOCK modes
-	uint32_t m_padding;
+	uint8_t m_padding;
+
+	uint16_t m_fracX;
+	uint16_t m_fracY;
 };
 static_assert(sizeof(SetTargetMode) == sizeof(uint64_t), "Expect 8 byte commands");
 

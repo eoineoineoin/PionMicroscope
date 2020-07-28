@@ -16,6 +16,8 @@ class ViewerWindow
 		ViewerWindow();
 		~ViewerWindow();
 
+		void setDisplayedManualControls(bool lockedX, float fracX, bool lockedY, float fracY);
+
 	signals:
 		// Update display with most recently read value, in range 0-1
 		void newReadout(float readout);

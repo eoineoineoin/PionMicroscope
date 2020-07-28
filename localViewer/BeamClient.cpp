@@ -26,6 +26,21 @@ void BeamClient::sendResolutionChange(int xyResolution)
 	m_serverConnection->write(reinterpret_cast<const char*>(&setRes), sizeof(setRes));
 }
 
+void BeamClient::sendManualControlChange(bool xLock, float xFrac, bool yLock, float yFrac)
+{
+	if(m_serverConnection == nullptr)
+		return;
+
+	Packets::SetTargetMode setTarget;
+	using AxisMode = Packets::SetTargetMode::AxisMode;
+	setTarget.m_modeX = xLock ? AxisMode::LOCK : AxisMode::UNLOCK;
+	setTarget.m_modeY = yLock ? AxisMode::LOCK : AxisMode::UNLOCK;
+	setTarget.m_fracX = (uint16_t)(xFrac * UINT16_MAX);
+	setTarget.m_fracY = (uint16_t)(yFrac * UINT16_MAX);
+
+	m_serverConnection->write(reinterpret_cast<const char*>(&setTarget), sizeof(setTarget));
+}
+
 void BeamClient::dataReadyToRead()
 {
 	uint8_t inputBuffer[800];
@@ -51,9 +66,15 @@ void BeamClient::dataReadyToRead()
 			emit onResolutionChanged(*resChanged);
 			curPacket = resChanged + 1;
 		}
+		else if(curPacket->m_type == Packets::Type::SET_TARGET_MODE)
+		{
+			const Packets::SetTargetMode* targetChanged = curPacket->asSetTargetMode();
+			emit onManualControlsUpdated(*targetChanged);
+			curPacket = targetChanged + 1;
+		}
 		else
 		{
-			assert("Packet type not handled");
+			assert(false && "Packet type not handled");
 		}
 	}
 

@@ -11,10 +11,12 @@ public:
 signals:
 	void onResolutionChanged(const Packets::ResolutionChanged& newResolution);
 	void onBeamUpdated(const std::vector<Packets::BeamState>& beamUpdates);
+	void onManualControlsUpdated(const Packets::SetTargetMode& newTarget);
 
 public slots:
 	void connect(QString hostname, uint16_t port);
 	void sendResolutionChange(int xyResolution);
+	void sendManualControlChange(bool xLock, float xFrac, bool yLock, float yFrac);
 
 protected:
 	void dataReadyToRead();

@@ -17,6 +17,11 @@ Packets::BeamState BeamController::step()
 		m_xyPlateState.m_lastY = (m_xyPlateState.m_lastY + 1) % m_imageProps.m_yResolution;
 	}
 
+	// Apply manual controls, if enabled:
+	if(m_imageProps.m_isLocked[0])
+		m_xyPlateState.m_lastX = m_imageProps.m_lockTarget[0];
+	if(m_imageProps.m_isLocked[1])
+		m_xyPlateState.m_lastY = m_imageProps.m_lockTarget[1];
 
 	float xFrac = (float)m_xyPlateState.m_lastX / (float)m_imageProps.m_xResolution;
 	float yFrac = (float)m_xyPlateState.m_lastY / (float)m_imageProps.m_yResolution;
@@ -25,7 +30,7 @@ Packets::BeamState BeamController::step()
 	float yVoltage = yFrac / DAC_VREF;
 
 	m_d2a.writeVoltage(DACBoard::Channel::A, xVoltage);
-	m_d2a.writeVoltage(DACBoard::Channel::B, xVoltage);
+	m_d2a.writeVoltage(DACBoard::Channel::B, yVoltage);
 
 	usleep(m_imageProps.m_pauseUsec);
 	
@@ -40,16 +45,28 @@ Packets::BeamState BeamController::step()
 
 void BeamController::setResolution(uint16_t resolutionX, uint16_t resolutionY)
 {
+	// Recalculate the fraction, since we converted it to a "pixel" value:
+	float fracX = (float)m_imageProps.m_lockTarget[0] / (float)m_imageProps.m_xResolution;
+	float fracY = (float)m_imageProps.m_lockTarget[1] / (float)m_imageProps.m_xResolution;
+
 	m_imageProps.m_xResolution = resolutionX;
 	m_imageProps.m_yResolution = resolutionY;
+
+	// And re-apply the fraction:
+	m_imageProps.m_lockTarget[0] = fracX * resolutionX;
+	m_imageProps.m_lockTarget[1] = fracY * resolutionY;
 }
 
-void BeamController::lockX(uint16_t xImagespace)
+void BeamController::lock(Axis axis, float frac)
 {
-	assert(false);
+	int idx = axis == Axis::Y;
+	m_imageProps.m_isLocked[idx] = true;
+	uint16_t axisResolution = idx == 0 ? m_imageProps.m_xResolution : m_imageProps.m_yResolution;
+	m_imageProps.m_lockTarget[idx] = axisResolution * frac;
 }
 
-void BeamController::freeX()
+void BeamController::free(Axis axis)
 {
-	assert(false);
+	int idx = axis == Axis::Y;
+	m_imageProps.m_isLocked[idx] = false;
 }
