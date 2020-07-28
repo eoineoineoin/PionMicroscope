@@ -64,6 +64,8 @@ void ImageGenerator::setResolution(uint16_t resX, uint16_t resY)
 	if(m_imageData == nullptr || resX != m_imageData->rect().width() || resY != m_imageData->rect().height())
 	{
 		m_imageData = std::make_unique<QImage>(resX, resY, QImage::Format_RGB32);
+		// Fill the image a dark green as a visual indicator that we haven't had data yet
+		m_imageData->fill(0xff003000);
 		m_recvQueue.clear();
 		emit resolutionChanged(m_imageData->rect());
 	}

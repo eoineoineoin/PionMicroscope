@@ -1,4 +1,4 @@
-#include <ViewerWindow.h>
+#include <ViewerWindow.hpp>
 #include <QPushButton>
 #include <QToolButton>
 #include <QDialogButtonBox>

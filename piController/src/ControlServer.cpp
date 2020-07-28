@@ -47,7 +47,7 @@ ControlServer::ControlServer()
 	int err = bind(serverFd, (sockaddr*)&listenAddr, sizeof(listenAddr));
 	if(err != 0)
 	{
-		printf("Could not bind to socket (%i)", errno);
+		printf("Could not bind to socket (%i)\n", errno);
 	}
 	else
 	{
@@ -88,13 +88,17 @@ void ControlServer::step(CommandHandler* commandHandler,
 	}
 
 	std::vector<LargestCommand> incomingCommands;
-	for(auto it = m_clients.begin(); it != m_clients.end();)
+	for(auto it = m_clients.begin(); it != m_clients.end(); it++)
 	{
 		fd_set readFds;
-		timeval waitTime = {0};
+		timeval waitTime;
+		waitTime.tv_sec = 0;
+		waitTime.tv_usec = 10;
+
 		FD_ZERO(&readFds);
 		FD_SET(it->m_socket, &readFds);
-		if(select(1, &readFds, nullptr, nullptr, &waitTime))
+
+		if(select(it->m_socket + 1, &readFds, nullptr, nullptr, &waitTime))
 		{
 			LargestCommand cmdIn;
 			int nRead = recv(it->m_socket, &cmdIn, sizeof(cmdIn), MSG_DONTWAIT);
@@ -116,8 +120,8 @@ void ControlServer::step(CommandHandler* commandHandler,
 			commandHandler->setResolution(setRes->m_resolutionX, setRes->m_resolutionY);
 			
 			Packets::ResolutionChanged resolutionInfo;
-			resolutionInfo.m_resolutionX = newClientConnectionInfo.m_resolutionX;
-			resolutionInfo.m_resolutionY = newClientConnectionInfo.m_resolutionY;
+			resolutionInfo.m_resolutionX = setRes->m_resolutionX;
+			resolutionInfo.m_resolutionY = setRes->m_resolutionY;
 			appendToBuffer(outputBuffer, resolutionInfo);
 		}
 	}

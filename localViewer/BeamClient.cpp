@@ -7,6 +7,22 @@ void BeamClient::connect(QString hostname, uint16_t port)
 	QObject::connect(m_serverConnection.get(), &QTcpSocket::readyRead, this, &BeamClient::dataReadyToRead);
 }
 
+void BeamClient::sendResolutionChange(int xyResolution)
+{
+	Packets::SetResolution setRes;
+
+	if(xyResolution < 0 || xyResolution > UINT16_MAX)
+	{
+		// Outside range of what we can display.
+		return;
+	}
+
+	setRes.m_resolutionX = (uint16_t)xyResolution;
+	setRes.m_resolutionY = (uint16_t)xyResolution;
+
+	m_serverConnection->write(reinterpret_cast<const char*>(&setRes), sizeof(setRes));
+}
+
 void BeamClient::dataReadyToRead()
 {
 	uint8_t inputBuffer[800];
@@ -34,7 +50,7 @@ void BeamClient::dataReadyToRead()
 		}
 		else
 		{
-			assert(false && "Packet type not handled");
+			assert("Packet type not handled");
 		}
 	}
 

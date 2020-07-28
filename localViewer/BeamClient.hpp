@@ -14,6 +14,7 @@ signals:
 
 public slots:
 	void connect(QString hostname, uint16_t port);
+	void sendResolutionChange(int xyResolution);
 
 protected:
 	void dataReadyToRead();

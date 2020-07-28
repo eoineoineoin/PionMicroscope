@@ -21,6 +21,13 @@ int main(int argc, char** argv)
 	// For user pressing "connect" button:
 	QObject::connect(&window, &ViewerWindow::connectRequested, &server, &BeamClient::connect);
 
+	// For user pressing "change resolution" button. The way this will work is that we'll
+	// send a packet to the server with our new resolution, and we'll eventually get a
+	// confirmation back; only then will we change the display. This allows for multiple
+	// clients connected to a server, where one might send the "change resolution" command.
+	QObject::connect(&window, &ViewerWindow::newResolutionRequested,
+		&server, &BeamClient::sendResolutionChange);
+
 	// When server sends a "resolution changed" confirmation, resize our image:
 	QObject::connect(&server, &BeamClient::onResolutionChanged,
 		[&imageGenerator](const Packets::ResolutionChanged& newRes)
