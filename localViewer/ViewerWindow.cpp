@@ -79,6 +79,8 @@ public:
 
 	QComboBox* m_comboBox;
 };
+
+const char* lockLabels[2][2] = {{"Lock X", "Unlock X"}, {"Lock Y", "Unlock Y"}};
 }
 
 ViewerWindow::ViewerWindow()
@@ -96,11 +98,6 @@ ViewerWindow::ViewerWindow()
 		QMenu* connectionMenu;
 		{
 			connectionMenu = new QMenu;
-			connectionMenu->addAction("Lock/Unlock X",
-				[this]()
-				{
-					this->toggleXLockRequested();
-				});
 			connectionMenu->addAction("Change resolution",
 				[this]()
 				{
@@ -144,6 +141,31 @@ ViewerWindow::ViewerWindow()
 					this->saveImage(saveFile);
 				}
 			});
+	}
+
+	// Controls for manaual X/Y control
+	{
+		QWidget* beamControls = new QWidget();
+		QGridLayout* beamControlsLayout = new QGridLayout();
+
+		for(int a = 0; a < 2; a++)
+		{
+			m_manualControlToggles[a] = new QPushButton(lockLabels[a][0]);
+			m_manualControlSliders[a] = new QSlider(Qt::Horizontal);
+			m_manualControlSliders[a]->setRange(0, 1000);
+			m_manualControlSliders[a]->setValue(500);
+			m_manualControlSliders[a]->setEnabled(false);
+			beamControlsLayout->addWidget(m_manualControlToggles[a], a, 0);
+			beamControlsLayout->addWidget(m_manualControlSliders[a], a, 1);
+
+			QObject::connect(m_manualControlToggles[a], &QPushButton::clicked,
+					this, &ViewerWindow::lockUnlockClicked);
+			QObject::connect(m_manualControlSliders[a], &QSlider::valueChanged,
+					this, &ViewerWindow::emitManualControlOverride);
+		}
+
+		beamControls->setLayout(beamControlsLayout);
+		combinedLayout->addWidget(beamControls);
 	}
 
 	QWidget* liveDisplay = new QWidget(this);
@@ -208,4 +230,25 @@ void ViewerWindow::updateImage(QImage* newImage)
 void ViewerWindow::setImageSize(QRect imageSize)
 {
 	m_imageScene->setSceneRect(imageSize);
+}
+
+void ViewerWindow::lockUnlockClicked(bool)
+{
+	int idx = QObject::sender() != m_manualControlToggles[0]; // 0 for x, 1 for y
+
+	bool toggledState = !m_manualControlSliders[idx]->isEnabled();
+	m_manualControlSliders[idx]->setEnabled(toggledState);
+	m_manualControlToggles[idx]->setText(lockLabels[idx][toggledState]);
+
+	emitManualControlOverride();
+}
+
+void ViewerWindow::emitManualControlOverride()
+{
+	bool xLocked = m_manualControlSliders[0]->isEnabled();
+	float fracX = m_manualControlSliders[0]->value() / (float)m_manualControlSliders[0]->maximum();
+	bool yLocked = m_manualControlSliders[1]->isEnabled();
+	float fracY = m_manualControlSliders[1]->value() / (float)m_manualControlSliders[1]->maximum();
+
+	emit newBeamStateRequested(xLocked, fracX, yLocked, fracY);
 }
