@@ -25,6 +25,7 @@ class ImageGenerator
 
 	public slots:
 		void saveImage(QString filenameOut);
+		void clearImage();
 
 	protected:
 		std::unique_ptr<QImage> m_imageData;

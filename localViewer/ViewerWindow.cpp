@@ -114,7 +114,7 @@ ViewerWindow::ViewerWindow()
 				this->connectRequested(split.at(0), split.at(1).toUShort());
 			});
 
-		QPushButton* resolutionButton = new QPushButton("Resolution");
+		QPushButton* resolutionButton = new QPushButton("Resolution...");
 		connectionLayout->addWidget(resolutionButton);
 		QObject::connect(resolutionButton, &QPushButton::clicked,
 			[this]()
@@ -123,8 +123,12 @@ ViewerWindow::ViewerWindow()
 				if(diag.exec() == QDialog::Accepted)
 				{
 					this->newResolutionRequested(diag.selectedResolution());
-					}
+				}
 			});
+
+		QPushButton* clearButton = new QPushButton("Clear");
+		connectionLayout->addWidget(clearButton);
+		QObject::connect(clearButton, &QPushButton::clicked, this, &ViewerWindow::clearImageRequested);
 
 		QPushButton* saveButton = new QPushButton("Save");
 		connectionLayout->addWidget(saveButton);

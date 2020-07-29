@@ -15,6 +15,7 @@ int main(int argc, char** argv)
 	ImageGenerator imageGenerator;
 	QObject::connect(&imageGenerator, &ImageGenerator::updatedImage, &window, &ViewerWindow::updateImage);
 	QObject::connect(&imageGenerator, &ImageGenerator::resolutionChanged, &window, &ViewerWindow::setImageSize);
+	QObject::connect(&window, &ViewerWindow::clearImageRequested, &imageGenerator, &ImageGenerator::clearImage);
 
 	BeamClient server;
 

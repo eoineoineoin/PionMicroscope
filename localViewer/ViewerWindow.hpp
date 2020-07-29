@@ -24,6 +24,7 @@ class ViewerWindow
 		void connectRequested(QString hostname, uint16_t port);
 		void saveImage(QString filenameOut);
 		void newResolutionRequested(int res);
+		void clearImageRequested();
 
 		// Emitted when the user has requested a change to the beam manual controls
 		// If lockedX/lockedY are true, that axis is under user-control, and will be set
