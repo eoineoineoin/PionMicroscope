@@ -2,6 +2,7 @@
 #include <ADS1256.h>
 #include <bcm2835.h>
 #include <algorithm>
+#include <cmath>
 
 #if SIMULATOR == 1
 extern "C"
@@ -36,12 +37,24 @@ DACBoard::DACBoard(ReferenceVoltage ref, int chipSelectPin)
 #endif
 }
 
+#if SIMULATOR == 1
+// Remember the last value written out, for simulating input. Just used to
+// procedurally generate a value used by the A2D simulator.
+static float s_fractionA = 0.0f;
+static float s_fractionB = 0.0f;
+#endif
 
 void DACBoard::writeVoltage(Channel channel, float out)
 {
 #if SIMULATOR == 1
-	(void)channel;
-	(void)out;
+	if(channel == Channel::A)
+	{
+		s_fractionA = out / m_refVoltage;
+	}
+	else
+	{
+		s_fractionB = out / m_refVoltage;
+	}
 	return;
 #else
 	uint8_t channelId = channel == Channel::A ? 0x30 : 0x34;
@@ -170,7 +183,8 @@ float getChannelValue(uint8_t channelIdx)
 {
 #if SIMULATOR == 1
 	(void)channelIdx;
-	return 0.1f;
+	return 5.0f * sin(s_fractionA * M_PI * 2 * 7) *
+		0.5f * (1.0f + sin(s_fractionB * M_PI * 2 * 3));
 #else
 	// From datasheet, in calibration section:
 	// output = ((pga * vin / 2vref) - (ofc / alpha)) * fsc * beta
