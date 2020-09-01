@@ -58,9 +58,11 @@ int main(int argc, char** argv)
 		{
 			imageGenerator.updatePixels(&beamStates[0], beamStates.size());
 
-			//TODO: Formalize this, as it is wrong, after correcting input lib:
-			float maxVal = (float)(~(decltype(beamStates.back().m_input0))0);
-			float lastFrac = (float)((beamStates.back().m_input0) / maxVal);
+			// Select the most recent update and use it to update the UI, just
+			// for some visual confirmation of activity, without having to
+			// scrutinize the image in the case of small changes.
+			float lastVoltage = beamStates.back().unpackVoltage();
+			float lastFrac = lastVoltage / Packets::BeamState::maxVoltage();
 			window.newReadout(lastFrac);
 		});
 

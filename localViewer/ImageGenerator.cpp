@@ -1,18 +1,20 @@
 #include <ImageGenerator.hpp>
 #include <QImage>
+#include <algorithm>
 
 // Color this many of the most recently recieved pixels differently:
 static const int newQueueSize = 100;
 
 // Rescale an input reading; red for new pixels, grey for old
 template<bool NEW_PIXEL>
-inline QRgb u32ToRgb(uint32_t in)
+inline QRgb toRgb(const Packets::BeamState& bs)
 {
-	// Apparently a 23 bit input value; just linearly scale it for now
-	//uint8_t val = (uint8_t)((in & 0x007f8000) >> 15);
-	// In practice, seeing a max value of order magnitude 0x006400a6
-	uint8_t val = (uint8_t)((255.0f) * ((float)in / (float)0x6fffff));
+	float frac = bs.unpackVoltage() / bs.maxVoltage();
+	// Clamp between 0 and 1 (means we lose information if the sample is reporting
+	// a negative voltage, which shouldn't happen in normal circumstances)
+	frac = std::max(0.0f, std::min(1.0f, frac));
 
+	uint8_t val = (uint8_t)((255.0f) * frac);
 	if(NEW_PIXEL)
 	{
 		return 0xff000000 | (val << 16);
@@ -40,13 +42,13 @@ void ImageGenerator::updatePixels(const Packets::BeamState* newStates, int numSt
 	while(m_recvQueue.size() > newQueueSize)
 	{
 		const auto& last = m_recvQueue.front();
-		m_imageData->setPixel(last.m_x, last.m_y, u32ToRgb<false>(last.m_input0));
+		m_imageData->setPixel(last.m_x, last.m_y, toRgb<false>(last));
 		m_recvQueue.pop_front();
 	}
 
 	for(const Packets::BeamState& newPixel : m_recvQueue)
 	{
-		m_imageData->setPixel(newPixel.m_x, newPixel.m_y, u32ToRgb<true>(newPixel.m_input0));
+		m_imageData->setPixel(newPixel.m_x, newPixel.m_y, toRgb<true>(newPixel));
 	}
 
 	// Colour the most recently recieved pixel bright blue, so we can see the read head

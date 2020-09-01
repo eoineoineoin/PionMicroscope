@@ -27,9 +27,11 @@ struct DACBoard
 	// connected to the chip-select pin on this additional board.
 	DACBoard(ReferenceVoltage ref, int chipSelectPin = 23);
 
-
 	// Write the value \a out to either A (DAC0) or B (DAC1)
 	void writeVoltage(Channel channel, float out);
+
+	// Get the reference value this board is using as a floating point value
+	float getReferenceVoltage() const { return m_refVoltage; }
 
 protected:
 	uint8_t m_chipSelectPin;

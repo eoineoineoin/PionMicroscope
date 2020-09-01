@@ -2,6 +2,7 @@
 #include <DAC8532.h>
 #include <ADS1256.h>
 #include <unistd.h>
+#include <algorithm>
 
 BeamController::BeamController()
 	: m_d2a(DACBoard::REF_5V)
@@ -26,20 +27,20 @@ Packets::BeamState BeamController::step()
 	float xFrac = (float)m_xyPlateState.m_lastX / (float)m_imageProps.m_xResolution;
 	float yFrac = (float)m_xyPlateState.m_lastY / (float)m_imageProps.m_yResolution;
 
-	float xVoltage = xFrac / DAC_VREF;
-	float yVoltage = yFrac / DAC_VREF;
+	float xVoltage = xFrac * m_d2a.getReferenceVoltage();
+	float yVoltage = yFrac * m_d2a.getReferenceVoltage();
 
 	m_d2a.writeVoltage(DACBoard::Channel::A, xVoltage);
 	m_d2a.writeVoltage(DACBoard::Channel::B, yVoltage);
 
 	usleep(m_imageProps.m_pauseUsec);
 	
-	uint32_t inputVoltage = A2D::getChannelValue(1);
+	const float inputVoltage = A2D::getChannelValue(0);
+
 	Packets::BeamState stateOut;
 	stateOut.m_x = m_xyPlateState.m_lastX;
 	stateOut.m_y = m_xyPlateState.m_lastY;
-	stateOut.m_input0 = inputVoltage;
-
+	stateOut.packVoltage(inputVoltage);
 	return stateOut;
 }
 

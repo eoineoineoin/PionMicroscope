@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <assert.h>
+#include <algorithm>
 
 namespace Packets
 {
@@ -34,9 +35,28 @@ struct TypedPacket : BasePacket
 
 struct BeamState : public TypedPacket<Type::BEAM_STATE>
 {
-	uint16_t m_input0;
+	/// This corresponds to a float value, rescaled and packed to fit
+	/// 16 bits. A value of INT16_MAX indicates a reading of 5V.
+	/// Use packVoltage() and unpackVoltage() to convert between float.
+	int16_t m_input0;
 	uint16_t m_x;
 	uint16_t m_y;
+
+	static float maxVoltage() { return 5.0f; }
+
+	// Helper to pack a voltage into m_input0
+	void packVoltage(float v)
+	{
+		const float clamped = std::max(-maxVoltage(), std::min(maxVoltage(), v));
+		const float frac = clamped / maxVoltage();
+		m_input0 = frac * INT16_MAX;
+	}
+
+	// Unpack the stored voltage, returning float in the range +/- maxVoltage()
+	float unpackVoltage() const
+	{
+		return (maxVoltage() * m_input0) / float(INT16_MAX);
+	}
 };
 static_assert(sizeof(BeamState) == sizeof(uint64_t), "Expect 8 byte commands");
 
